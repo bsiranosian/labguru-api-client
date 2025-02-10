@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "labguru-api-client"
-version = "0.1.0"
+version = "0.1.2"
 description = "Python api client for accessing the Labguru Electronic Lab Notebook."
 authors = ["Ben Siranosian <bsiranosian@gmail.com>"]
 license = "MIT"
@@ -9,7 +9,7 @@ packages = [
     {include = "labguru_api_client"},
 ]
 include = ["CHANGELOG.md", "labguru_api_client/py.typed"]
-
+repository = "https://github.com/bsiranosian/labguru-api-client"
 
 [tool.poetry.dependencies]
 python = "^3.9"

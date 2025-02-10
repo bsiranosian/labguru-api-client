@@ -31,8 +31,8 @@ exp1_1 = labguru.get_experiment(1)
 # returned object will be a dict/json representation of the experiment
 print(exp1_1["title"])
 
-exp1_updated = labguru.update_experiment(1, {"title": "Modified title"})
-assert labguru.get_experiment(1)["title"] == "Modified_title"
+exp1_updated = labguru.update_experiment(1, {"title": "My new title"})
+assert labguru.get_experiment(1)["title"] == "My new title"
 ```
 
 ## Usage (generated code)
