@@ -17,9 +17,23 @@ pip install labguru-api-client
 
 ## Usage (wrapper functions)
 
-Coming soon! I'm working on a wrapper class that handles authentication and makes it easier to use the generated code. For example, `labguru.get_experiment(id)` and `labguru.update_experiment(id, {title: "New title"})`.
+Wrapper functions are under active development and are expected to change. For now, a few experiment-related fucntions have been defined.
 
-For now, you can use the generated code directly.
+```python
+from labguru_wrapper.labguru_api import LabguruAPI
+
+# define env vars in ~/.labguru.env
+# LABGURU_API_KEY is required
+# LABGURU_BASE_URL is optional
+labguru = LabguruAPI()
+
+exp1_1 = labguru.get_experiment(1)
+# returned object will be a dict/json representation of the experiment
+print(exp1_1["title"])
+
+exp1_updated = labguru.update_experiment(1, {"title": "Modified title"})
+assert labguru.get_experiment(1)["title"] == "Modified_title"
+```
 
 ## Usage (generated code)
 
