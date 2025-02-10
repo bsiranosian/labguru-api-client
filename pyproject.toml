@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "labguru-api-client"
-version = "v1"
-description = "A client library for accessing Labguru API"
-authors = []
+version = "0.1.0"
+description = "Python api client for accessing the Labguru Electronic Lab Notebook."
+authors = ["Ben Siranosian <bsiranosian@gmail.com>"]
+license = "MIT"
 readme = "README.md"
 packages = [
     {include = "labguru_api_client"},

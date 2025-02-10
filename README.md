@@ -1,71 +1,62 @@
 # labguru-api-client
 
-Python api client for interating with the Labguru ELN
+Python api client for accessing the Labguru Electronic Lab Notebook.
 
-## Usage
+This package contains two main groups of code:
 
-First, create a client:
+1. Generated code from the OpenAPI spec for the Labguru API, using [openapi-python-client](https://github.com/openapi-generators/openapi-python-client). This code is in the `labguru_api_client` directory.
+1. Wrapper functions around the generated code to make it easier to use. This part is still in development.
+
+## Installing
+
+You can install this package using pip:
 
 ```python
+pip install labguru-api-client
+```
+
+## Usage (wrapper functions)
+
+Coming soon! I'm working on a wrapper class that handles authentication and makes it easier to use the generated code. For example, `labguru.get_experiment(id)` and `labguru.update_experiment(id, {title: "New title"})`.
+
+For now, you can use the generated code directly.
+
+## Usage (generated code)
+
+Create a client and make an example request to get an experiment by id. Your Labguru API key should be stored in an environment variable called `LABGURU_API_KEY`. Extracing information from the response can be done by parsing the `response.content` attribute. The Labguru openAPI spec did not include a response model for their endpoints, so `response.parsed` will be `None`.
+
+```python
+import json
 from labguru_api_client import Client
+from labguru_api_client.api.experiments import get_api_v1_experiments_id
 
-client = Client(base_url="https://api.example.com")
+client = Client(base_url="https://my.labguru.com/")
+exp_1 = get_api_v1_experiments_id.sync_detailed(client=client, token=os.getenv("LABGURU_API_KEY"), id=1)
+if exp_1.status_code == 200:
+    print(json.loads(exp_1.content)["title"])
 ```
 
-If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
+To update or create an experiment, use the generated models to create a body for the request.
 
 ```python
-from labguru_api_client import AuthenticatedClient
+import json
+from labguru_api_client import Client
+from labguru_api_client.api.experiments import put_api_v1_experiments_id
+from labguru_api_client.models import UpdateExperimentItem, UpdateExperiment
 
-client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
-```
+updated_experiment_item = UpdateExperimentItem.from_dict({
+    "title": "My new title"
+})
+updated_experiment = UpdateExperiment(token=os.getenv("LABGURU_API_KEY"), item=updated_experiment_item)
 
-Now call your endpoint and use your models:
-
-```python
-from labguru_api_client.models import MyDataModel
-from labguru_api_client.api.my_tag import get_my_data_model
-from labguru_api_client.types import Response
-
-with client as client:
-    my_data: MyDataModel = get_my_data_model.sync(client=client)
-    # or if you need more info (e.g. status_code)
-    response: Response[MyDataModel] = get_my_data_model.sync_detailed(client=client)
-```
-
-Or do the same thing with an async version:
-
-```python
-from labguru_api_client.models import MyDataModel
-from labguru_api_client.api.my_tag import get_my_data_model
-from labguru_api_client.types import Response
-
-async with client as client:
-    my_data: MyDataModel = await get_my_data_model.asyncio(client=client)
-    response: Response[MyDataModel] = await get_my_data_model.asyncio_detailed(client=client)
-```
-
-By default, when you're calling an HTTPS API it will attempt to verify that SSL is working correctly. Using certificate verification is highly recommended most of the time, but sometimes you may need to authenticate to a server (especially an internal server) using a custom certificate bundle.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken",
-    verify_ssl="/path/to/certificate_bundle.pem",
-)
-```
-
-You can also disable certificate validation altogether, but beware that **this is a security risk**.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken", 
-    verify_ssl=False
-)
+exp_1_put = put_api_v1_experiments_id.sync_detailed(client=client, id=1, body=updated_experiment)
+exp_1_updated = get_api_v1_experiments_id.sync_detailed(client=client, token=os.getenv("LABGURU_API_KEY"), id=1)
+if exp_1_put.status_code == 200 and exp_1_updated.status_code == 200:
+    assert json.loads(exp_1_updated.content)["title"] == "My new title"
 ```
 
 Things to know:
+
 1. Every path/method combo becomes a Python module with four functions:
     1. `sync`: Blocking request that returns parsed data (if successful) or `None`
     1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
@@ -91,7 +82,7 @@ def log_response(response):
     print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
 
 client = Client(
-    base_url="https://api.example.com",
+    base_url="https://my.labguru.com",
     httpx_args={"event_hooks": {"request": [log_request], "response": [log_response]}},
 )
 
@@ -105,22 +96,8 @@ import httpx
 from labguru_api_client import Client
 
 client = Client(
-    base_url="https://api.example.com",
+    base_url="https://my.labguru.com",
 )
 # Note that base_url needs to be re-set, as would any shared cookies, headers, etc.
-client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies="http://localhost:8030"))
+client.set_httpx_client(httpx.Client(base_url="https://my.labguru.com", proxies="http://localhost:8030"))
 ```
-
-## Building / publishing this package
-This project uses [Poetry](https://python-poetry.org/) to manage dependencies  and packaging.  Here are the basics:
-1. Update the metadata in pyproject.toml (e.g. authors, version)
-1. If you're using a private repository, configure it with Poetry
-    1. `poetry config repositories.<your-repository-name> <url-to-your-repository>`
-    1. `poetry config http-basic.<your-repository-name> <username> <password>`
-1. Publish the client with `poetry publish --build -r <your-repository-name>` or, if for public PyPI, just `poetry publish --build`
-
-If you want to install this client into another project without publishing it (e.g. for development) then:
-1. If that project **is using Poetry**, you can simply do `poetry add <path-to-this-client>` from that project
-1. If that project is not using Poetry:
-    1. Build a wheel with `poetry build -f wheel`
-    1. Install that wheel from the other project `pip install <path-to-wheel>`
