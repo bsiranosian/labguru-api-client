@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from pathlib import Path
 from labguru_api_client import AuthenticatedClient
 
 # Experiments endpoints
@@ -126,8 +127,8 @@ class LabguruAPI:
         return self.projects.delete(project_id)
 
     # -- Attachments methods --
-    def upload_attachment(self, attachment_data: dict, files: dict):
-        return self.attachments.upload(attachment_data, files)
+    def upload_attachment(self, file_path: Path | str, attach_to_uuid: str = None, description: str = None):
+        return self.attachments.upload(file_path, attach_to_uuid, description)
 
     def get_attachment(self, attachment_id: int):
         return self.attachments.get(attachment_id)
@@ -357,7 +358,7 @@ class AttachmentsAPI:
         self.client = client
         self.token = token
 
-    def upload(self, attachment_data: dict, files: dict):
+    def upload(self, file_path: Path | str, attach_to_uuid: str = None, description: str = None):
         """
         Upload a file attachment.
 
@@ -365,9 +366,19 @@ class AttachmentsAPI:
         :param files: Dictionary of file objects to upload.
         """
         from labguru_api_client.models import CreateAttachment
+        from labguru_api_client.types import File
 
-        attachment_payload = CreateAttachment(token=self.token, **attachment_data)  # type: ignore
-        response = post_api_v1_attachments.sync_detailed(client=self.client, data=attachment_data, files=files)
+        with open(file_path, "rb") as file:
+            title = Path(file_path).name
+            itemattachment = File(payload=file, file_name=title)
+            attachment_payload = CreateAttachment(
+                token=self.token,
+                itemattachment=itemattachment,
+                itemattach_to_uuid=attach_to_uuid,
+                itemtitle=title,
+                itemdescription=description,
+            )  # type: ignore
+            response = post_api_v1_attachments.sync_detailed(client=self.client, body=attachment_payload)
         if response.status_code in (200, 201):
             return json.loads(response.content)
         else:
@@ -381,9 +392,10 @@ class AttachmentsAPI:
             raise Exception(f"Error retrieving attachment {attachment_id}: {response.status_code} - {json.loads(response.content)}")
 
     def update(self, attachment_id: int, update_fields: dict):
-        from labguru_api_client.models import UpdateAttachment
+        from labguru_api_client.models import UpdateAttachment, UpdateAttachmentItem
 
-        update_payload = UpdateAttachment(token=self.token, **update_fields)  # type: ignore
+        update_attachment_item = UpdateAttachmentItem.from_dict(update_fields)
+        update_payload = UpdateAttachment(token=self.token, item=update_attachment_item)  # type: ignore
         response = put_api_v1_attachments_id.sync_detailed(client=self.client, id=attachment_id, body=update_payload)
         if response.status_code == 200:
             return json.loads(response.content)
@@ -393,7 +405,7 @@ class AttachmentsAPI:
     def delete(self, attachment_id: int):
         base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
         response = requests.delete(f"{base_url}/api/v1/attachments/{attachment_id}?token={self.token}")
-        if response.status_code == 204:
+        if response.status_code == 200:
             return True
         else:
             raise Exception(f"Error deleting attachment {attachment_id}: {response.status_code} - {response.content}")

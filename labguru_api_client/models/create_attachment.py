@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar, Union, Tuple
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -74,9 +74,7 @@ class CreateAttachment:
         )
 
         itemdescription = (
-            self.itemdescription
-            if isinstance(self.itemdescription, Unset)
-            else (None, str(self.itemdescription).encode(), "text/plain")
+            self.itemdescription if isinstance(self.itemdescription, Unset) else (None, str(self.itemdescription).encode(), "text/plain")
         )
 
         field_dict: dict[str, Any] = {}
