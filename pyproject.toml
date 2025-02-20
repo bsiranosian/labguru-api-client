@@ -7,6 +7,7 @@ license = "MIT"
 readme = "README.md"
 packages = [
     {include = "labguru_api_client"},
+    { include = "labguru_wrapper" }
 ]
 include = ["CHANGELOG.md", "labguru_api_client/py.typed"]
 repository = "https://github.com/bsiranosian/labguru-api-client"
