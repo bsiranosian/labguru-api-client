@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "labguru-api-client"
-version = "0.1.2"
+version = "0.1.3"
 description = "Python api client for accessing the Labguru Electronic Lab Notebook."
 authors = ["Ben Siranosian <bsiranosian@gmail.com>"]
 license = "MIT"
