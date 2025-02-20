@@ -13,3 +13,8 @@ CREATE_EXPERIMENT_PAYLOAD = {"title": "Integration Test Experiment", "project_id
 CREATE_FOLDER_PAYLOAD = {"title": "Integration Test Folder", "project_id": PROJECT_TO_MODIFY}
 CREATE_ATTACHMENT_PAYLOAD = {"description": "Integration Test Attachment"}
 CREATE_PROJECT_PAYLOAD = {"title": "Integration Test Project"}
+
+# biocollections settings
+TEST_GENERIC_COLLECTION_NAME = "test_collection"
+GENERIC_COLLECTION_FILTER_VALUE = "_1"
+CREATE_GENERIC_ITEM_PAYLOAD = {"name": "Integration Test Item", "test_field": "123"}

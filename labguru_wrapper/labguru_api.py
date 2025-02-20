@@ -3,6 +3,7 @@ import json
 import requests
 from pathlib import Path
 from labguru_api_client import AuthenticatedClient
+import pandas as pd
 
 # Experiments endpoints
 from labguru_api_client.api.experiments import (
@@ -35,7 +36,29 @@ from labguru_api_client.api.attachments import (
     get_api_v1_attachments_id,
 )
 
-from labguru_api_client.models import UpdateExperiment, UpdateExperimentItem
+# Biocollections (generic items) endpoints
+from labguru_api_client.api.generic_items import (
+    post_api_v1_biocollections_generic_collection_name,
+    get_api_v1_biocollections_generic_collection_name,
+    put_api_v1_biocollections_generic_collection_name_id,
+    get_api_v1_biocollections_generic_collection_name_id,
+)
+
+# Biocollections (filters) endpoints
+from labguru_api_client.api.filters import get_api_v1_biocollections_collection_name
+
+# Models for experiments
+from labguru_api_client.models import UpdateExperiment, UpdateExperimentItem, AddExperiment, AddExperimentItem
+
+# Models for generic biocollections items
+from labguru_api_client.models import (
+    CreateGenericItem,
+    CreateGenericItemItem,
+    UpdateGenericItem,
+    UpdateGenericItemItem,
+)
+
+from labguru_api_client.types import Unset, UNSET
 from dotenv import load_dotenv
 from typing import Optional
 
@@ -62,6 +85,7 @@ class LabguruAPI:
         self.folders = FoldersAPI(self.client, self.token)
         self.projects = ProjectsAPI(self.client, self.token)
         self.attachments = AttachmentsAPI(self.client, self.token)
+        self.biocollections = BiocollectionsAPI(self.client, self.token)
 
     def _load_env(self, env_file: str) -> None:
         if os.path.exists(env_file):
@@ -127,7 +151,11 @@ class LabguruAPI:
         return self.projects.delete(project_id)
 
     # -- Attachments methods --
-    def upload_attachment(self, file_path: Path | str, attach_to_uuid: str = None, description: str = None):
+    def upload_attachment(self, file_path: Path | str, attach_to_uuid: str | None | Unset = None, description: str | None | Unset = None):
+        if attach_to_uuid is None:
+            attach_to_uuid = UNSET
+        if description is None:
+            description = UNSET
         return self.attachments.upload(file_path, attach_to_uuid, description)
 
     def get_attachment(self, attachment_id: int):
@@ -138,6 +166,40 @@ class LabguruAPI:
 
     def delete_attachment(self, attachment_id: int):
         return self.attachments.delete(attachment_id)
+
+    # -- Biocollections methods --
+    def filter_biocollection_items(
+        self,
+        collection_name: str,
+        filter_field: str,
+        filter_operator: str,
+        filter_value: str,
+        page: int = 1,
+        meta: str = "true",
+        kendo: str = "true",
+        filter_logic: str = "and",
+    ):
+        return self.biocollections.filter_items(
+            collection_name, filter_field, filter_operator, filter_value, page, meta, kendo, filter_logic
+        )
+
+    def list_generic_items(self, generic_collection_name: str, page: int = 1, meta: str = "true"):
+        return self.biocollections.list_generic_items(generic_collection_name, page, meta)
+
+    def list_generic_items_all_pages(self, generic_collection_name: str, page: int = 1, meta: str = "true"):
+        return self.biocollections.list_generic_items_all_pages(generic_collection_name)
+
+    def create_generic_item(self, generic_collection_name: str, generic_item_data: dict):
+        return self.biocollections.create_generic_item(generic_collection_name, generic_item_data)
+
+    def update_generic_item(self, generic_collection_name: str, id: int, update_fields: dict):
+        return self.biocollections.update_generic_item(generic_collection_name, id, update_fields)
+
+    def delete_generic_item(self, generic_collection_name: str, id: int):
+        return self.biocollections.delete_generic_item(generic_collection_name, id)
+
+    def collection_to_df(self, generic_collection_name: str, fill_missing_with_none: bool = True):
+        return self.biocollections.collection_to_df(generic_collection_name, fill_missing_with_none)
 
 
 class ExperimentsAPI:
@@ -193,8 +255,6 @@ class ExperimentsAPI:
 
         :param experiment_data: Dictionary with experiment fields.
         """
-        from labguru_api_client.models import AddExperiment, AddExperimentItem
-
         create_experiment_item = AddExperimentItem.from_dict(experiment_data)
         create_experiment_payload = AddExperiment(token=self.token, item=create_experiment_item)  # type: ignore
         response = post_api_v1_experiments.sync_detailed(client=self.client, body=create_experiment_payload)
@@ -358,7 +418,7 @@ class AttachmentsAPI:
         self.client = client
         self.token = token
 
-    def upload(self, file_path: Path | str, attach_to_uuid: str = None, description: str = None):
+    def upload(self, file_path: Path | str, attach_to_uuid: str | Unset = UNSET, description: str | Unset = UNSET):
         """
         Upload a file attachment.
 
@@ -409,3 +469,234 @@ class AttachmentsAPI:
             return True
         else:
             raise Exception(f"Error deleting attachment {attachment_id}: {response.status_code} - {response.content}")
+
+
+class BiocollectionsAPI:
+    """
+    A dedicated class for biocollections-related endpoints.
+
+    Provides methods for:
+      - Filtering custom collection items
+      - Listing generic items in a collection
+      - Creating a new generic item
+      - Updating a generic item
+      - Retrieving a generic item by ID
+      - Retrieving derived collections
+    """
+
+    def __init__(self, client: AuthenticatedClient, token: str):
+        self.client = client
+        self.token = token
+
+    def filter_items(
+        self,
+        collection_name: str,
+        filter_field: str,
+        filter_operator: str,
+        filter_value: str,
+        page: int = 1,
+        meta: str = "true",
+        kendo: str = "true",
+        filter_logic: str = "and",
+    ):
+        """
+        Filter custom collection items by applying a filter.
+
+        :param collection_name: The collection name to filter (e.g. 'myCollection').
+        :param filter_field: Field to filter on. Valid fields are: title, auto_name(SySID), alternative_name, description, owner_id
+        :param filter_operator: Filter operator (e.g. 'contains').
+        :param filter_value: Value to filter by.
+        :param page: Page number (default 1).
+        :param meta: 'true' or 'false' to include summarized metadata.
+        :param kendo: 'true' (required).
+        :param filter_logic: Logic operator between filters (default 'and').
+        """
+        response = get_api_v1_biocollections_collection_name.sync_detailed(
+            client=self.client,
+            token=self.token,
+            page=page,
+            meta=meta,
+            kendo=kendo,
+            collection_name=collection_name,
+            filterlogic=filter_logic,
+            filterfilters0field=filter_field,
+            filterfilters0operator=filter_operator,
+            filterfilters0value=filter_value,
+        )
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error filtering collection '{collection_name}': {response.status_code} - {json.loads(response.content)}")
+
+    def list_generic_items(self, generic_collection_name: str, page: int = 1, meta: str = "true"):
+        """
+        List all generic items in the specified collection.
+
+        :param generic_collection_name: The generic collection name.
+        :param page: Page number (default 1).
+        :param meta: 'true' or 'false' to include summarized metadata.
+        """
+        response = get_api_v1_biocollections_generic_collection_name.sync_detailed(
+            client=self.client,
+            token=self.token,
+            generic_collection_name=generic_collection_name,
+            page=page,
+            meta=meta,
+        )
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(
+                f"Error retrieving generic items for collection '{generic_collection_name}': {response.status_code} - {json.loads(response.content)}"
+            )
+
+    def list_generic_items_all_pages(self, generic_collection_name: str):
+        """
+        List all generic items in the specified collection, across all pages.
+
+        :param generic_collection_name: The generic collection name.
+        """
+        page = 1
+        all_items = []
+        while True:
+            response = get_api_v1_biocollections_generic_collection_name.sync_detailed(
+                client=self.client,
+                token=self.token,
+                generic_collection_name=generic_collection_name,
+                page=page,
+                meta="true",
+            )
+            if response.status_code == 200:
+                data = json.loads(response.content)
+                all_items.extend(data.get("data", []))
+                if data.get("meta", {}).get("page_count", 0) > page:
+                    page += 1
+                else:
+                    break
+            else:
+                raise Exception(
+                    f"Error retrieving generic items for collection '{generic_collection_name}': {response.status_code} - {json.loads(response.content)}"
+                )
+        return all_items
+
+    def create_generic_item(self, generic_collection_name: str, generic_item_data: dict):
+        """
+        Create a new generic item in the specified collection.
+
+        :param generic_collection_name: The generic collection name.
+        :param generic_item_data: Dictionary with the item data.
+        """
+        item = CreateGenericItemItem.from_dict(generic_item_data)
+        payload = CreateGenericItem(token=self.token, item=item)  # type: ignore
+        response = post_api_v1_biocollections_generic_collection_name.sync_detailed(
+            client=self.client, generic_collection_name=generic_collection_name, body=payload
+        )
+        if response.status_code in (200, 201):
+            return json.loads(response.content)
+        else:
+            raise Exception(
+                f"Error creating generic item in collection '{generic_collection_name}': {response.status_code} - {json.loads(response.content)}"
+            )
+
+    def update_generic_item(self, generic_collection_name: str, id: int, update_fields: dict):
+        """
+        Update a generic item in the specified collection.
+
+        :param generic_collection_name: The generic collection name.
+        :param id: The ID of the generic item.
+        :param update_fields: Dictionary with the fields to update.
+        """
+        update_item = UpdateGenericItemItem.from_dict(update_fields)
+        payload = UpdateGenericItem(token=self.token, item=update_item)  # type: ignore
+        response = put_api_v1_biocollections_generic_collection_name_id.sync_detailed(
+            client=self.client, generic_collection_name=generic_collection_name, id=id, body=payload
+        )
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(
+                f"Error updating generic item {id} in collection '{generic_collection_name}': {response.status_code} - {json.loads(response.content)}"
+            )
+
+    def get_generic_item(self, generic_collection_name: str, id: int):
+        """
+        Retrieve a generic item by ID from the specified collection.
+
+        :param generic_collection_name: The generic collection name.
+        :param id: The ID of the generic item.
+        """
+        response = get_api_v1_biocollections_generic_collection_name_id.sync_detailed(
+            client=self.client, token=self.token, generic_collection_name=generic_collection_name, id=id
+        )
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(
+                f"Error retrieving generic item {id} in collection '{generic_collection_name}': {response.status_code} - {json.loads(response.content)}"
+            )
+
+    def delete_generic_item(self, generic_collection_name: str, id: int):
+        """
+        Delete a generic item by ID from the specified collection.
+
+        :param generic_collection_name: The generic collection name.
+        :param id: The ID of the generic item.
+        """
+        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
+        response = requests.delete(f"{base_url}/api/v1/biocollections/{generic_collection_name}/{id}?token={self.token}")
+        if response.status_code == 204:
+            return True
+        else:
+            raise Exception(
+                f"Error deleting generic item {id} in collection '{generic_collection_name}': {response.status_code} - {response.content}"
+            )
+
+    def collection_to_df(self, collection_name: str, fill_missing_with_none: bool = True):
+        """
+        Get a pandas dataframe out of a labguru collection.
+
+        :param collection_name: The name of the collection in labguru
+        :param fill_missing_with_none: If True, fill missing strings with None
+        :return: pandas DataFrame representing the collection
+        """
+        # returns list of dict
+        collection_items = self.list_generic_items_all_pages(collection_name)
+
+        fixed_columns = ["id", "name", "auto_name", "created_at", "updated_at", "updated_by"]
+
+        # table-specific columns
+        all_keys = list(collection_items[0].keys())
+        key_index_0 = [i for i, key in enumerate(all_keys) if key == "tags"][0]
+        key_index_1 = [i for i, key in enumerate(all_keys) if key == "sys_id"][0]
+        specific_columns = all_keys[key_index_0 + 1 : key_index_1]
+
+        extract_columns = fixed_columns + specific_columns
+        sub_dict = [{k: v for k, v in item.items() if k in extract_columns} for item in collection_items]
+        collection_df = pd.DataFrame.from_dict(sub_dict)
+
+        # nested columns
+        collection_df["owner"] = [item["owner"]["name"] for item in collection_items]
+
+        # parent information
+        if collection_items[0]["parents"] is not None:
+            for parent_name, parent_dict in collection_items[0]["parents"].items():
+                # not sure why this is a list of dict, it should just be one column
+                parent_dict = parent_dict[0]
+                column_name = parent_dict["parent_collection"]
+                assert column_name not in collection_df.columns
+                collection_df[column_name] = [item["parents"][parent_name][0]["parent_title"] for item in collection_items]
+
+        # remove unnecessary column starting with Biocollections::GenericCollection
+        collection_df = collection_df.loc[:, ~collection_df.columns.str.startswith("Biocollections::GenericCollection")]
+
+        # fill missing strings with None
+        if fill_missing_with_none:
+            collection_df = collection_df.map(lambda x: None if x == "" else x)
+
+        # re-order columns to have the system columns at the back
+        system_columns = ["auto_name", "created_at", "owner", "updated_at", "updated_by"]
+        collection_df = collection_df[[col for col in collection_df.columns if col not in system_columns] + system_columns]
+
+        collection_df.set_index("id", inplace=True)
+
+        return collection_df
