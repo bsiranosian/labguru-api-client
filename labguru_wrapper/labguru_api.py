@@ -44,6 +44,14 @@ from labguru_api_client.api.generic_items import (
     get_api_v1_biocollections_generic_collection_name_id,
 )
 
+# Plasmids endpoints
+from labguru_api_client.api.plasmids import (
+    post_api_v1_plasmids,
+    get_api_v1_plasmids,
+    put_api_v1_plasmids_id,
+    get_api_v1_plasmids_id,
+)
+
 # Biocollections (filters) endpoints
 from labguru_api_client.api.filters import get_api_v1_biocollections_collection_name
 
@@ -58,12 +66,15 @@ from labguru_api_client.models import (
     UpdateGenericItemItem,
 )
 
+# Models for plasmids
+from labguru_api_client.models import CreatePlasmid, CreatePlasmidItem, UpdatePlasmid, UpdatePlasmidItem
+
+
 from labguru_api_client.types import Unset, UNSET
 from dotenv import load_dotenv
 from typing import Optional
 
 
-# Your LabguruAPI and ExperimentsAPI classes go here...
 class LabguruAPI:
     """
     A wrapper for labguru-api-client.
@@ -86,6 +97,7 @@ class LabguruAPI:
         self.projects = ProjectsAPI(self.client, self.token)
         self.attachments = AttachmentsAPI(self.client, self.token)
         self.biocollections = BiocollectionsAPI(self.client, self.token)
+        self.plasmids = PlasmidsAPI(self.client, self.token)
 
     def _load_env(self, env_file: str) -> None:
         if os.path.exists(env_file):
@@ -200,6 +212,22 @@ class LabguruAPI:
 
     def collection_to_df(self, generic_collection_name: str, fill_missing_with_none: bool = True):
         return self.biocollections.collection_to_df(generic_collection_name, fill_missing_with_none)
+
+    # -- Plasmid methods --
+    def get_all_plasmids(self, page: int = 1, meta: str = "false"):
+        return self.plasmids.get_all(page=page, meta=meta)
+
+    def get_plasmid(self, plasmid_id: int):
+        return self.plasmids.get(plasmid_id)
+
+    def update_plasmid(self, plasmid_id: int, update_fields: dict):
+        return self.plasmids.update(plasmid_id, update_fields)
+
+    def create_plasmid(self, plasmid_data: dict):
+        return self.plasmids.create(plasmid_data)
+
+    def delete_plasmid(self, plasmid_id: int):
+        return self.plasmids.delete(plasmid_id)
 
 
 class ExperimentsAPI:
@@ -700,3 +728,80 @@ class BiocollectionsAPI:
         collection_df.set_index("id", inplace=True)
 
         return collection_df
+
+
+class PlasmidsAPI:
+    """
+    A dedicated class for plasmid-related endpoints.
+
+    Provides methods:
+        - get_all(page, meta)
+        - get(plasmid_id)
+        - update(plasmid_id, update_fields)
+        - create(plasmid_data)
+    """
+
+    def __init__(self, client: AuthenticatedClient, token: str):
+        self.client = client
+        self.token = token
+
+    def get_all(self, page: int = 1, meta: str = "false"):
+        response = get_api_v1_plasmids.sync_detailed(client=self.client, token=self.token, page=page, meta=meta)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving plasmids: {response.status_code} - {json.loads(response.content)}")
+
+    def get(self, plasmid_id: int):
+        response = get_api_v1_plasmids_id.sync_detailed(client=self.client, token=self.token, id=plasmid_id)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving plasmid {plasmid_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def update(self, plasmid_id: int, update_fields: dict):
+        """
+        Update a plasmid.
+
+        :param plasmid_id: The ID of the plasmid to update.
+        :param update_fields: Dictionary with the fields to update.
+        """
+        # update_item = UpdateGenericItemItem.from_dict(update_fields)
+        # payload = UpdateGenericItem(token=self.token, item=update_item)  # type: ignore
+
+        updated_plasmid_item = UpdatePlasmidItem.from_dict(update_fields)
+        updated_plasmid_payload = UpdatePlasmid(token=self.token, item=updated_plasmid_item)  # type: ignore
+        response = put_api_v1_plasmids_id.sync_detailed(client=self.client, id=plasmid_id, body=updated_plasmid_payload)
+        if response.status_code in (200, 204):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error updating plasmid {plasmid_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def create(self, plasmid_data: dict):
+        """
+        Create a new plasmid.
+
+        :param plasmid_data: Dictionary with plasmid fields.
+        """
+
+        create_plasmid_item = CreatePlasmidItem.from_dict(plasmid_data)
+        create_plasmid_payload = CreatePlasmid(token=self.token, item=create_plasmid_item)  # type: ignore
+        response = post_api_v1_plasmids.sync_detailed(client=self.client, body=create_plasmid_payload)
+        if response.status_code in (200, 201):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error creating plasmid: {response.status_code} - {json.loads(response.content)}")
+
+    def delete(self, plasmid_id: int):
+        """
+        Delete a plasmid.
+
+        :param plasmid_id: The ID of the plasmid to delete.
+        :return: True if successful.
+        """
+        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
+        response = requests.delete(f"{base_url}/api/v1/plasmids/{plasmid_id}?token={self.token}")
+        if response.status_code == 204:
+            return True
+        else:
+            raise Exception(f"Error deleting plasmid {plasmid_id}: {response.status_code} - {response.content}")
