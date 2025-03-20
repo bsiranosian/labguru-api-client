@@ -365,7 +365,7 @@ class LabguruAPI:
         )
 
     def get_generic_items_all(self, generic_collection_name: str):
-        return self._get_list_all_pages(self.biocollections.get_generic_items(generic_collection_name))
+        return self._get_list_all_pages(lambda page, meta: self.biocollections.get_generic_items(generic_collection_name, page, meta))
 
     def get_generic_item_by_id(self, generic_collection_name: str, id: int):
         return self.biocollections.get_generic_item(generic_collection_name, id)
