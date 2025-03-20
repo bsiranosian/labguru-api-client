@@ -52,6 +52,22 @@ from labguru_api_client.api.plasmids import (
     get_api_v1_plasmids_id,
 )
 
+# Protocols endpoints
+from labguru_api_client.api.protocols import (
+    get_api_v1_protocols,
+    get_api_v1_protocols_id,
+    post_api_v1_protocols,
+    put_api_v1_protocols_id,
+)
+
+# SOPs endpoints
+from labguru_api_client.api.so_ps import (
+    get_api_v1_sops,
+    get_api_v1_sops_id,
+    post_api_v1_sops,
+    put_api_v1_sops_id,
+)
+
 # Biocollections (filters) endpoints
 from labguru_api_client.api.filters import get_api_v1_biocollections_collection_name
 
@@ -69,6 +85,11 @@ from labguru_api_client.models import (
 # Models for plasmids
 from labguru_api_client.models import CreatePlasmid, CreatePlasmidItem, UpdatePlasmid, UpdatePlasmidItem
 
+# Models for protocols
+from labguru_api_client.models import CreateProtocol, UpdateProtocol, UpdateProtocolItem
+
+# Models for SOPs
+from labguru_api_client.models import CreateSOP, CreateSOPItem, UpdateSOP, UpdateSOPItem
 
 from labguru_api_client.types import Unset, UNSET
 from dotenv import load_dotenv
@@ -92,12 +113,14 @@ class LabguruAPI:
             raise ValueError("LABGURU_API_KEY not found in environment.")
         self.base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
         self.client = AuthenticatedClient(base_url=self.base_url, token=self.token)
-        self.experiments = ExperimentsAPI(self.client, self.token)
-        self.folders = FoldersAPI(self.client, self.token)
-        self.projects = ProjectsAPI(self.client, self.token)
-        self.attachments = AttachmentsAPI(self.client, self.token)
-        self.biocollections = BiocollectionsAPI(self.client, self.token)
-        self.plasmids = PlasmidsAPI(self.client, self.token)
+        self.experiments = ExperimentsAPI(self.client, self.token, self.base_url)
+        self.folders = FoldersAPI(self.client, self.token, self.base_url)
+        self.projects = ProjectsAPI(self.client, self.token, self.base_url)
+        self.attachments = AttachmentsAPI(self.client, self.token, self.base_url)
+        self.biocollections = BiocollectionsAPI(self.client, self.token, self.base_url)
+        self.plasmids = PlasmidsAPI(self.client, self.token, self.base_url)
+        self.protocols = ProtocolsAPI(self.client, self.token, self.base_url)
+        self.sops = SopsAPI(self.client, self.token, self.base_url)
 
     def _load_env(self, env_file: str) -> None:
         if os.path.exists(env_file):
@@ -173,6 +196,9 @@ class LabguruAPI:
     def get_attachment(self, attachment_id: int):
         return self.attachments.get(attachment_id)
 
+    def get_all_attachments_meta(self, page: int = 1, meta: str = "false"):
+        return self.attachments.get_all(page=page, meta=meta)
+
     def update_attachment(self, attachment_id: int, update_fields: dict):
         return self.attachments.update(attachment_id, update_fields)
 
@@ -229,6 +255,38 @@ class LabguruAPI:
     def delete_plasmid(self, plasmid_id: int):
         return self.plasmids.delete(plasmid_id)
 
+    # -- Protocol methods --
+    def get_all_protocols(self, page: int = 1, meta: str = "false"):
+        return self.protocols.get_all(page=page, meta=meta)
+
+    def get_protocol(self, protocol_id: int):
+        return self.protocols.get(protocol_id)
+
+    def update_protocol(self, protocol_id: int, update_fields: dict):
+        return self.protocols.update(protocol_id, update_fields)
+
+    def create_protocol(self, protocol_data: dict):
+        return self.protocols.create(protocol_data)
+
+    def delete_protocol(self, protocol_id: int):
+        return self.protocols.delete(protocol_id)
+
+    # -- SOP methods --
+    def get_all_sops(self, page: int = 1, meta: str = "false"):
+        return self.sops.get_all(page=page, meta=meta)
+
+    def get_sop(self, sop_id: int):
+        return self.sops.get(sop_id)
+
+    def update_sop(self, sop_id: int, update_fields: dict):
+        return self.sops.update(sop_id, update_fields)
+
+    def create_sop(self, sop_data: dict):
+        return self.sops.create(sop_data)
+
+    def delete_sop(self, sop_id: int):
+        return self.sops.delete(sop_id)
+
 
 class ExperimentsAPI:
     """
@@ -242,9 +300,10 @@ class ExperimentsAPI:
         - delete(experiment_id)
     """
 
-    def __init__(self, client: AuthenticatedClient, token: str):
+    def __init__(self, client: AuthenticatedClient, token: str, base_url: str):
         self.client = client
         self.token = token
+        self.base_url = base_url
 
     def get_all(self, page: int = 1, meta: str = "false"):
         response = get_api_v1_experiments.sync_detailed(client=self.client, token=self.token, page=page, meta=meta)
@@ -297,8 +356,7 @@ class ExperimentsAPI:
 
         :param experiment_id: The ID of the experiment to delete.
         """
-        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
-        response = requests.delete(f"{base_url}/api/v1/experiments/{experiment_id}?token={self.token}")
+        response = requests.delete(f"{self.base_url}/api/v1/experiments/{experiment_id}?token={self.token}")
         if response.status_code == 204:
             return True
         else:
@@ -317,9 +375,10 @@ class FoldersAPI:
       - delete(folder_id)
     """
 
-    def __init__(self, client: AuthenticatedClient, token: str):
+    def __init__(self, client: AuthenticatedClient, token: str, base_url: str):
         self.client = client
         self.token = token
+        self.base_url = base_url
 
     def get_all(self, page: int = 1, meta: str = "false", period: Optional[str] = None, project_id: Optional[str] = None):
         params = {"token": self.token, "page": page, "meta": meta}
@@ -361,8 +420,7 @@ class FoldersAPI:
             raise Exception(f"Error creating folder: {response.status_code} - {json.loads(response.content)}")
 
     def delete(self, folder_id: int):
-        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
-        response = requests.delete(f"{base_url}/api/v1/milestones/{folder_id}?token={self.token}")
+        response = requests.delete(f"{self.base_url}/api/v1/milestones/{folder_id}?token={self.token}")
         if response.status_code == 204:
             return True
         else:
@@ -381,9 +439,10 @@ class ProjectsAPI:
       - delete(project_id)
     """
 
-    def __init__(self, client: AuthenticatedClient, token: str):
+    def __init__(self, client: AuthenticatedClient, token: str, base_url: str):
         self.client = client
         self.token = token
+        self.base_url = base_url
 
     def get_all(self, page: int = 1, meta: str = "false"):
         response = get_api_v1_projects.sync_detailed(client=self.client, token=self.token, page=page, meta=meta)
@@ -423,8 +482,7 @@ class ProjectsAPI:
 
     def delete(self, project_id: int):
         raise NotImplementedError("Delete project is not supported by the Labguru API.")
-        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
-        response = requests.delete(f"{base_url}/api/v1/projects/{project_id}?token={self.token}")
+        response = requests.delete(f"{self.base_url}/api/v1/projects/{project_id}?token={self.token}")
         if response.status_code == 204:
             return True
         else:
@@ -442,9 +500,10 @@ class AttachmentsAPI:
       - delete(attachment_id)
     """
 
-    def __init__(self, client: AuthenticatedClient, token: str):
+    def __init__(self, client: AuthenticatedClient, token: str, base_url: str):
         self.client = client
         self.token = token
+        self.base_url = base_url
 
     def upload(self, file_path: Path | str, attach_to_uuid: str | Unset = UNSET, description: str | Unset = UNSET):
         """
@@ -472,6 +531,14 @@ class AttachmentsAPI:
         else:
             raise Exception(f"Error uploading attachment: {response.status_code} - {json.loads(response.content)}")
 
+    def get_all(self, page: int = 1, meta: str = "false"):
+        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
+        response = requests.get(f"{base_url}/api/v1/attachments?token={self.token}&page={page}&meta={meta}")
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving attachments: {response.status_code} - {json.loads(response.content)}")
+
     def get(self, attachment_id: int):
         response = get_api_v1_attachments_id.sync_detailed(client=self.client, token=self.token, id=attachment_id)
         if response.status_code == 200:
@@ -491,8 +558,7 @@ class AttachmentsAPI:
             raise Exception(f"Error updating attachment {attachment_id}: {response.status_code} - {json.loads(response.content)}")
 
     def delete(self, attachment_id: int):
-        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
-        response = requests.delete(f"{base_url}/api/v1/attachments/{attachment_id}?token={self.token}")
+        response = requests.delete(f"{self.base_url}/api/v1/attachments/{attachment_id}?token={self.token}")
         if response.status_code == 200:
             return True
         else:
@@ -512,9 +578,10 @@ class BiocollectionsAPI:
       - Retrieving derived collections
     """
 
-    def __init__(self, client: AuthenticatedClient, token: str):
+    def __init__(self, client: AuthenticatedClient, token: str, base_url: str):
         self.client = client
         self.token = token
+        self.base_url = base_url
 
     def filter_items(
         self,
@@ -670,8 +737,7 @@ class BiocollectionsAPI:
         :param generic_collection_name: The generic collection name.
         :param id: The ID of the generic item.
         """
-        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
-        response = requests.delete(f"{base_url}/api/v1/biocollections/{generic_collection_name}/{id}?token={self.token}")
+        response = requests.delete(f"{self.base_url}/api/v1/biocollections/{generic_collection_name}/{id}?token={self.token}")
         if response.status_code == 204:
             return True
         else:
@@ -741,9 +807,10 @@ class PlasmidsAPI:
         - create(plasmid_data)
     """
 
-    def __init__(self, client: AuthenticatedClient, token: str):
+    def __init__(self, client: AuthenticatedClient, token: str, base_url: str):
         self.client = client
         self.token = token
+        self.base_url = base_url
 
     def get_all(self, page: int = 1, meta: str = "false"):
         response = get_api_v1_plasmids.sync_detailed(client=self.client, token=self.token, page=page, meta=meta)
@@ -765,10 +832,8 @@ class PlasmidsAPI:
 
         :param plasmid_id: The ID of the plasmid to update.
         :param update_fields: Dictionary with the fields to update.
+        :return: The updated plasmid data.
         """
-        # update_item = UpdateGenericItemItem.from_dict(update_fields)
-        # payload = UpdateGenericItem(token=self.token, item=update_item)  # type: ignore
-
         updated_plasmid_item = UpdatePlasmidItem.from_dict(update_fields)
         updated_plasmid_payload = UpdatePlasmid(token=self.token, item=updated_plasmid_item)  # type: ignore
         response = put_api_v1_plasmids_id.sync_detailed(client=self.client, id=plasmid_id, body=updated_plasmid_payload)
@@ -782,8 +847,8 @@ class PlasmidsAPI:
         Create a new plasmid.
 
         :param plasmid_data: Dictionary with plasmid fields.
+        :return: The created plasmid data.
         """
-
         create_plasmid_item = CreatePlasmidItem.from_dict(plasmid_data)
         create_plasmid_payload = CreatePlasmid(token=self.token, item=create_plasmid_item)  # type: ignore
         response = post_api_v1_plasmids.sync_detailed(client=self.client, body=create_plasmid_payload)
@@ -797,11 +862,203 @@ class PlasmidsAPI:
         Delete a plasmid.
 
         :param plasmid_id: The ID of the plasmid to delete.
-        :return: True if successful.
+        :return: True if successful, otherwise an exception is raised.
         """
-        base_url = os.getenv("LABGURU_BASE_URL", "https://my.labguru.com")
-        response = requests.delete(f"{base_url}/api/v1/plasmids/{plasmid_id}?token={self.token}")
+        response = requests.delete(f"{self.base_url}/api/v1/plasmids/{plasmid_id}?token={self.token}")
         if response.status_code == 204:
             return True
         else:
             raise Exception(f"Error deleting plasmid {plasmid_id}: {response.status_code} - {response.content}")
+
+
+class ProtocolsAPI:
+    """
+    A dedicated class for protocol-related endpoints.
+
+    Provides methods:
+        - get_all(page, meta)
+        - get(protocol_id)
+        - create(protocol_data)
+        - update(protocol_id, update_fields)
+        - delete(protocol_id)
+    """
+
+    def __init__(self, client, token: str, base_url: str):
+        """
+        Initialize the ProtocolsAPI.
+
+        :param client: An instance of AuthenticatedClient.
+        :param token: API authentication token.
+        """
+        self.client = client
+        self.token = token
+        self.base_url = base_url
+
+    def get_all(self, page: int = 1, meta: str = "false"):
+        """
+        Retrieve all protocols.
+
+        :param page: Page number (default is 1).
+        :param meta: Include metadata flag ('true' or 'false').
+        :return: A JSON object containing protocols data.
+        """
+        response = get_api_v1_protocols.sync_detailed(client=self.client, token=self.token, page=page, meta=meta)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving protocols: {response.status_code} - {json.loads(response.content)}")
+
+    def get(self, protocol_id: int):
+        """
+        Retrieve a protocol by its ID.
+
+        :param protocol_id: The ID of the protocol to retrieve.
+        :return: A JSON object containing the protocol data.
+        """
+        response = get_api_v1_protocols_id.sync_detailed(client=self.client, token=self.token, id=protocol_id)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving protocol {protocol_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def create(self, protocol_data: dict):
+        """
+        Create a new protocol.
+
+        :param protocol_data: Dictionary with protocol fields.
+        :return: A JSON object containing the created protocol data.
+        """
+        raise NotImplementedError("Create protocol not implemented yet.")
+        # protocol_item = CreateProtocolItem.from_dict(protocol_data)
+        # payload = CreateProtocol(token=self.token, item=protocol_item)  # type: ignore
+        # response = post_api_v1_protocols.sync_detailed(client=self.client, body=payload)
+        # if response.status_code in (200, 201):
+        #     return json.loads(response.content)
+        # else:
+        #     raise Exception(f"Error creating protocol: {response.status_code} - {json.loads(response.content)}")
+
+    def update(self, protocol_id: int, update_fields: dict):
+        """
+        Update an existing protocol.
+
+        :param protocol_id: The ID of the protocol to update.
+        :param update_fields: Dictionary with the fields to update.
+        :return: A JSON object containing the updated protocol data.
+        """
+        update_item = UpdateProtocolItem.from_dict(update_fields)
+        payload = UpdateProtocol(token=self.token, item=update_item)  # type: ignore
+        response = put_api_v1_protocols_id.sync_detailed(client=self.client, id=protocol_id, body=payload)
+        if response.status_code in (200, 204):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error updating protocol {protocol_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def delete(self, protocol_id: int):
+        """
+        Delete a protocol.
+
+        :param protocol_id: The ID of the protocol to delete.
+        :return: True if the protocol was successfully deleted.
+        """
+        response = requests.delete(f"{self.base_url}/api/v1/protocols/{protocol_id}?token={self.token}")
+        if response.status_code == 204:
+            return True
+        else:
+            raise Exception(f"Error deleting protocol {protocol_id}: {response.status_code} - {json.loads(response.content)}")
+
+
+class SopsAPI:
+    """
+    A dedicated class for SOPs-related endpoints.
+
+    Provides methods:
+        - get_all(page, meta)
+        - get(sop_id)
+        - create(sop_data)
+        - update(sop_id, update_fields)
+        - delete(sop_id)
+    """
+
+    def __init__(self, client, token: str, base_url: str):
+        """
+        Initialize the SopsAPI.
+
+        :param client: An instance of AuthenticatedClient.
+        :param token: API authentication token.
+        """
+        self.client = client
+        self.token = token
+        self.base_url = base_url
+
+    def get_all(self, page: int = 1, meta: str = "false"):
+        """
+        Retrieve all SOPs.
+
+        :param page: Page number (default is 1).
+        :param meta: Include metadata flag ('true' or 'false').
+        :return: A JSON object containing SOPs data.
+        """
+        response = get_api_v1_sops.sync_detailed(client=self.client, token=self.token, page=page, meta=meta)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving SOPs: {response.status_code} - {json.loads(response.content)}")
+
+    def get(self, sop_id: int):
+        """
+        Retrieve a SOP by its ID.
+
+        :param sop_id: The ID of the SOP to retrieve.
+        :return: A JSON object containing the SOP data.
+        """
+        response = get_api_v1_sops_id.sync_detailed(client=self.client, token=self.token, id=sop_id)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving SOP {sop_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def create(self, sop_data: dict):
+        """
+        Create a new SOP.
+
+        :param sop_data: Dictionary with SOP fields.
+        :return: A JSON object containing the created SOP data.
+        """
+
+        sop_item = CreateSOPItem.from_dict(sop_data)
+        payload = CreateSOP(token=self.token, item=sop_item)  # type: ignore
+        response = post_api_v1_sops.sync_detailed(client=self.client, body=payload)
+        if response.status_code in (200, 201):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error creating SOP: {response.status_code} - {json.loads(response.content)}")
+
+    def update(self, sop_id: int, update_fields: dict):
+        """
+        Update an existing SOP.
+
+        :param sop_id: The ID of the SOP to update.
+        :param update_fields: Dictionary with the fields to update.
+        :return: A JSON object containing the updated SOP data.
+        """
+
+        update_item = UpdateSOPItem.from_dict(update_fields)
+        payload = UpdateSOP(token=self.token, item=update_item)  # type: ignore
+        response = put_api_v1_sops_id.sync_detailed(client=self.client, id=sop_id, body=payload)
+        if response.status_code in (200, 204):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error updating SOP {sop_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def delete(self, sop_id: int):
+        """
+        Delete a SOP.
+
+        :param sop_id: The ID of the SOP to delete.
+        :return: True if the SOP was successfully deleted.
+        """
+        response = requests.delete(f"{self.base_url}/api/v1/sops/{sop_id}?token={self.token}")
+        if response.status_code == 204:
+            return True
+        else:
+            raise Exception(f"Error deleting SOP {sop_id}: {response.status_code} - {response.content}")
