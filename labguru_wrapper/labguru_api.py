@@ -157,6 +157,19 @@ from labguru_api_client.api.boxes import (
     put_api_v1_boxes_id,
 )
 
+# Sections endpoints
+from labguru_api_client.api.sections import (
+    get_api_v1_sections_id,
+    put_api_v1_sections_id,
+    post_api_v1_sections,
+)
+
+# Elements endpoints
+from labguru_api_client.api.elements import (
+    get_api_v1_elements_id,
+    post_api_v1_elements,
+    put_api_v1_elements_id,
+)
 
 # Biocollections (filters) endpoints
 from labguru_api_client.api.filters import get_api_v1_biocollections_collection_name
@@ -214,6 +227,11 @@ from labguru_api_client.models import CreateDataset, CreateDatasetItem
 # Models for boxes
 from labguru_api_client.models import CreateBox, CreateBoxItem, UpdateBox, UpdateBoxItem
 
+# Models for sections
+from labguru_api_client.models import CreateSection, CreateSectionItem, UpdateSection, UpdateSectionItem
+
+# Models for elements
+from labguru_api_client.models import AddElement, AddElementItem
 
 from labguru_api_client.types import Unset, UNSET
 from dotenv import load_dotenv
@@ -257,6 +275,8 @@ class LabguruAPI:
         self.equipment = EquipmentAPI(self.client, self.token, self.base_url)
         self.datasets = DatasetsAPI(self.client, self.token, self.base_url)
         self.boxes = BoxesAPI(self.client, self.token, self.base_url)
+        self.sections = SectionsAPI(self.client, self.token, self.base_url)
+        self.elements = ElementsAPI(self.client, self.token, self.base_url)
 
     def _load_env(self, env_file: str) -> None:
         if os.path.exists(env_file):
@@ -621,6 +641,35 @@ class LabguruAPI:
 
     def delete_box(self, id: int):
         return self.boxes.delete(id)
+
+    # -- Sections methods --
+    def get_sections_all(self):
+        return self._get_list_all_pages(self.sections.get_all)
+
+    def get_section_by_id(self, id: int):
+        return self.sections.get(id)
+
+    def update_section(self, id: int, update_fields: dict):
+        return self.sections.update(id, update_fields)
+
+    def create_section(self, section_data: dict):
+        return self.sections.create(section_data)
+
+    def delete_section(self, id: int):
+        return self.sections.delete(id)
+
+    # -- Elements methods --
+    def get_element_by_id(self, id: int):
+        return self.elements.get(id)
+
+    def update_element(self, id: int, update_fields: dict):
+        return self.elements.update(id, update_fields)
+
+    def create_element(self, element_data: dict):
+        return self.elements.create(element_data)
+
+    def delete_element(self, id: int):
+        return self.elements.delete(id)
 
 
 class ExperimentsAPI:
@@ -2502,3 +2551,189 @@ class BoxesAPI:
             return True
         else:
             raise Exception(f"Error deleting box {box_id}: {response.status_code} - {response.content}")
+
+
+class SectionsAPI:
+    """
+    A dedicated class for sections-related endpoints.
+
+    Provides methods:
+        - get_all(page, meta)
+        - get(section_id)
+        - create(section_data)
+        - update(section_id, update_fields)
+        - delete(section_id)
+    """
+
+    def __init__(self, client, token: str, base_url: str):
+        """
+        Initialize the SectionsAPI.
+
+        :param client: An instance of AuthenticatedClient.
+        :param token: API authentication token.
+        """
+        self.client = client
+        self.token = token
+        self.base_url = base_url
+
+    def get_all(self, page: int = 1, meta: str = "false"):
+        """
+        Retrieve all sections.
+        :param page: Page number (default is 1).
+        :param meta: Include metadata flag ('true' or 'false').
+        :return: A JSON object containing sections data.
+        """
+        response = requests.get(f"{self.base_url}/api/v1/sections?token={self.token}&page={page}&meta={meta}")
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving sections: {response.status_code} - {json.loads(response.content)}")
+
+    def get(self, section_id: int):
+        """
+        Retrieve a section by its ID.
+
+        :param section_id: The ID of the section to retrieve.
+        :return: A JSON object containing the section data.
+        """
+        response = get_api_v1_sections_id.sync_detailed(client=self.client, token=self.token, id=section_id)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving section {section_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def create(self, section_data: dict):
+        """
+        Create a new section.
+
+        :param section_data: Dictionary with section fields.
+        :return: A JSON object containing the created section data.
+        """
+        section_item = CreateSectionItem.from_dict(section_data)
+        payload = CreateSection(token=self.token, item=section_item)
+        response = post_api_v1_sections.sync_detailed(client=self.client, body=payload)
+        if response.status_code in (200, 201):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error creating section: {response.status_code} - {json.loads(response.content)}")
+
+    def update(self, section_id: int, update_fields: dict):
+        """
+        Update an existing section.
+
+        :param section_id: The ID of the section to update.
+        :param update_fields: Dictionary with the fields to update.
+        :return: A JSON object containing the updated section data.
+        """
+        update_item = UpdateSectionItem.from_dict(update_fields)
+        payload = UpdateSection(token=self.token, item=update_item)
+        response = put_api_v1_sections_id.sync_detailed(client=self.client, id=section_id, body=payload)
+        if response.status_code in (200, 204):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error updating section {section_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def delete(self, section_id: int):
+        """
+        Delete a section.
+
+        :param section_id: The ID of the section to delete.
+        :return: True if the section was successfully deleted.
+        """
+        response = requests.delete(f"{self.base_url}/api/v1/sections/{section_id}?token={self.token}")
+        if response.status_code == 204:
+            return True
+        else:
+            raise Exception(f"Error deleting section {section_id}: {response.status_code} - {response.content}")
+
+
+class ElementsAPI:
+    """
+    A dedicated class for elements-related endpoints.
+
+    Provides methods:
+        - get_all(page, meta)
+        - get(element_id)
+        - create(element_data)
+        - update(element_id, update_fields)
+        - delete(element_id)
+    """
+
+    def __init__(self, client, token: str, base_url: str):
+        """
+        Initialize the ElementsAPI.
+
+        :param client: An instance of AuthenticatedClient.
+        :param token: API authentication token.
+        """
+        self.client = client
+        self.token = token
+        self.base_url = base_url
+
+    def get_all(self, page: int = 1, meta: str = "false"):
+        """
+        Retrieve all elements.
+        :param page: Page number (default is 1).
+        :param meta: Include metadata flag ('true' or 'false').
+        :return: A JSON object containing elements data.
+        """
+        raise NotImplementedError("Get all elements is not allowed by the API.")
+
+    def get(self, element_id: int):
+        """
+        Retrieve an element by its ID.
+
+        :param element_id: The ID of the element to retrieve.
+        :return: A JSON object containing the element data.
+        """
+        response = get_api_v1_elements_id.sync_detailed(client=self.client, token=self.token, id=element_id)
+        if response.status_code == 200:
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error retrieving element {element_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def create(self, element_data: dict):
+        """
+        Create a new element.
+
+        :param element_data: Dictionary with element fields.
+        :return: A JSON object containing the created element data.
+        """
+        raise NotImplementedError("Create element not implemented yet.")
+        element_item = CreateElementItem.from_dict(element_data)  # type: ignore
+        payload = CreateElement(token=self.token, item=element_item)  # type: ignore
+        response = post_api_v1_elements.sync_detailed(client=self.client, body=payload)
+        if response.status_code in (200, 201):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error creating element: {response.status_code} - {json.loads(response.content)}")
+
+    def update(self, element_id: int, update_fields: dict):
+        """
+        Update an existing element.
+
+        :param element_id: The ID of the element to update.
+        :param update_fields: Dictionary with the fields to update.
+        :return: A JSON object containing the updated element data.
+        """
+        raise NotImplementedError("Update element not implemented yet.")
+        update_item = UpdateElementItem.from_dict(update_fields)  # type: ignore
+        payload = UpdateElement(token=self.token, item=update_item)  # type: ignore
+        response = put_api_v1_elements_id.sync_detailed(client=self.client, id=element_id, body=payload)
+        if response.status_code in (200, 204):
+            return json.loads(response.content)
+        else:
+            raise Exception(f"Error updating element {element_id}: {response.status_code} - {json.loads(response.content)}")
+
+    def delete(self, element_id: int):
+        """
+        Delete an element.
+
+        :param element_id: The ID of the element to delete.
+        :return: True if the element was successfully deleted.
+        """
+        response = requests.delete(f"{self.base_url}/api/v1/elements/{element_id}?token={self.token}")
+        if response.status_code == 204:
+            return True
+        else:
+            raise Exception(f"Error deleting element {element_id}: {response.status_code} - {response.content}")
