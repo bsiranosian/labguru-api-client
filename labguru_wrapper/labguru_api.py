@@ -510,6 +510,118 @@ class LabguruAPI:
     def delete_plate(self, id: int):
         return self.plates.delete(id)
 
+    # -- Stocks methods --
+    def get_stocks_all(self):
+        return self._get_list_all_pages(self.stocks.get_all)
+
+    def get_stock_by_id(self, id: int):
+        return self.stocks.get(id)
+
+    def update_stock(self, id: int, update_fields: dict):
+        return self.stocks.update(id, update_fields)
+
+    def create_stock(self, stock_data: dict):
+        return self.stocks.create(stock_data)
+
+    def delete_stock(self, id: int):
+        return self.stocks.delete(id)
+
+    # -- Storage methods --
+    def get_storages_all(self):
+        return self._get_list_all_pages(self.storages.get_all)
+
+    def get_storage_by_id(self, id: int):
+        return self.storages.get(id)
+
+    def update_storage(self, id: int, update_fields: dict):
+        return self.storages.update(id, update_fields)
+
+    def create_storage(self, storage_data: dict):
+        return self.storages.create(storage_data)
+
+    def delete_storage(self, id: int):
+        return self.storages.delete(id)
+
+    # -- Sequences methods --
+    def get_sequences_all(self):
+        return self._get_list_all_pages(self.sequences.get_all)
+
+    def get_sequence_by_id(self, id: int):
+        return self.sequences.get(id)
+
+    def update_sequence(self, id: int, update_fields: dict):
+        return self.sequences.update(id, update_fields)
+
+    def create_sequence(self, sequence_data: dict):
+        return self.sequences.create(sequence_data)
+
+    def delete_sequence(self, id: int):
+        return self.sequences.delete(id)
+
+    # -- Proteins methods --
+    def get_proteins_all(self):
+        return self._get_list_all_pages(self.proteins.get_all)
+
+    def get_protein_by_id(self, id: int):
+        return self.proteins.get(id)
+
+    def update_protein(self, id: int, update_fields: dict):
+        return self.proteins.update(id, update_fields)
+
+    def create_protein(self, protein_data: dict):
+        return self.proteins.create(protein_data)
+
+    def delete_protein(self, id: int):
+        return self.proteins.delete(id)
+
+    # -- Equipment methods --
+    def get_equipment_all(self):
+        return self._get_list_all_pages(self.equipment.get_all)
+
+    def get_equipment_by_id(self, id: int):
+        return self.equipment.get(id)
+
+    def update_equipment(self, id: int, update_fields: dict):
+        return self.equipment.update(id, update_fields)
+
+    def create_equipment(self, equipment_data: dict):
+        return self.equipment.create(equipment_data)
+
+    def delete_equipment(self, id: int):
+        return self.equipment.delete(id)
+
+    # -- Datasets methods --
+    def get_datasets_all(self):
+        return self._get_list_all_pages(self.datasets.get_all)
+
+    def get_dataset_by_id(self, id: int):
+        return self.datasets.get(id)
+
+    def update_dataset(self, id: int, update_fields: dict):
+        return self.datasets.update(id, update_fields)
+
+    def create_dataset(self, dataset_data: dict):
+        return self.datasets.create(dataset_data)
+
+    def delete_dataset(self, id: int):
+        return self.datasets.delete(id)
+
+    # -- Boxes methods --
+    def get_boxes_all(self):
+        return self._get_list_all_pages(self.boxes.get_all)
+
+    def get_box_by_id(self, id: int):
+        return self.boxes.get(id)
+
+    def update_box(self, id: int, update_fields: dict):
+        return self.boxes.update(id, update_fields)
+
+    def create_box(self, box_data: dict):
+        return self.boxes.create(box_data)
+
+    def delete_box(self, id: int):
+        return self.boxes.delete(id)
+
 
 class ExperimentsAPI:
     """
