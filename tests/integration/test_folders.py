@@ -12,32 +12,32 @@ def labguru_api():
 
 
 @pytest.mark.integration
-def test_get_all_folders(labguru_api):
-    folders = labguru_api.get_all_folders(page=1, meta="false")
+def test_get_folders_all(labguru_api):
+    folders = labguru_api.get_folders_all()
     assert isinstance(folders, (dict, list)), "Response should be a dict or list."
 
 
 @pytest.mark.integration
-def test_get_folder(labguru_api):
+def test_get_folder_by_id(labguru_api):
     folder_id = test_settings.FOLDER_TO_MODIFY
-    folder = labguru_api.get_folder(folder_id)
+    folder = labguru_api.get_folder_by_id(folder_id)
     assert folder.get("id") == folder_id, f"Retrieved folder id {folder.get('id')} does not match expected {folder_id}."
 
 
 @pytest.mark.integration
 def test_update_folder(labguru_api):
     folder_id = test_settings.FOLDER_TO_MODIFY
-    original_folder = labguru_api.get_folder(folder_id)
+    original_folder = labguru_api.get_folder_by_id(folder_id)
     original_title = original_folder.get("title")
     update_fields = {"title": "Updated Folder title by Integration Test"}
     labguru_api.update_folder(folder_id, update_fields)
-    updated_folder = labguru_api.get_folder(folder_id)
+    updated_folder = labguru_api.get_folder_by_id(folder_id)
     assert updated_folder.get("title") == update_fields["title"], "Folder title was not updated."
 
     # Revert to original
     revert_fields = {"title": original_title}
     labguru_api.update_folder(folder_id, revert_fields)
-    reverted_folder = labguru_api.get_folder(folder_id)
+    reverted_folder = labguru_api.get_folder_by_id(folder_id)
     assert reverted_folder.get("title") == original_title, "Folder title was not reverted."
 
 
@@ -48,9 +48,9 @@ def test_create_and_delete_folder(labguru_api):
     assert "id" in created_folder, "Created folder does not have an 'id'."
     folder_id = created_folder["id"]
 
-    retrieved_folder = labguru_api.get_folder(folder_id)
+    retrieved_folder = labguru_api.get_folder_by_id(folder_id)
     assert retrieved_folder.get("title") == payload["title"], "Folder title does not match."
 
     labguru_api.delete_folder(folder_id)
     with pytest.raises(Exception):
-        labguru_api.get_folder(folder_id)
+        labguru_api.get_folder_by_id(folder_id)

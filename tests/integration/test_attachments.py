@@ -12,7 +12,7 @@ def labguru_api():
 
 
 @pytest.mark.integration
-def test_upload_and_get_attachment(labguru_api, tmp_path):
+def test_upload_and_get_attachment_by_id(labguru_api, tmp_path):
     # Create a temporary file to simulate an attachment.
     file_content = "This is a test attachment."
     file_path = tmp_path / "test_attachment.txt"
@@ -24,14 +24,14 @@ def test_upload_and_get_attachment(labguru_api, tmp_path):
     assert "id" in created_attachment, "Created attachment does not have an 'id'."
     attachment_id = created_attachment["id"]
 
-    retrieved_attachment = labguru_api.get_attachment(attachment_id)
+    retrieved_attachment = labguru_api.get_attachment_by_id(attachment_id)
     expected_desc = attachment_data.get("description", "")
     assert retrieved_attachment.get("description") == expected_desc, "Attachment description does not match."
 
     labguru_api.delete_attachment(attachment_id)
     # seems like attachments are not currenly deleted, even if the DELETE request is successful
     # with pytest.raises(Exception):
-    #     labguru_api.get_attachment(attachment_id)
+    #     labguru_api.get_attachment_by_id(attachment_id)
 
 
 # TODO: Link attachment to an element (the PUT/update request)

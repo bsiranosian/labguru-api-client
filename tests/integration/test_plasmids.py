@@ -15,22 +15,22 @@ def labguru_api():
 
 
 @pytest.mark.integration
-def test_get_all_plasmids(labguru_api):
-    plasmids = labguru_api.get_all_plasmids(page=1, meta="false")
+def test_get_plasmids_all(labguru_api):
+    plasmids = labguru_api.get_plasmids_all()
     assert isinstance(plasmids, (dict, list)), "Response should be a dict or list."
 
 
 @pytest.mark.integration
-def test_get_plasmid(labguru_api):
+def test_get_plasmid_by_id(labguru_api):
     plasmid_id = test_settings.ALLOWED_PLASMID_IDS[0]
-    plasmid = labguru_api.get_plasmid(plasmid_id)
+    plasmid = labguru_api.get_plasmid_by_id(plasmid_id)
     assert plasmid.get("id") == plasmid_id, f"Retrieved plasmid id {plasmid.get('id')} does not match expected {plasmid_id}."
 
 
 @pytest.mark.integration
 def test_update_plasmid(labguru_api):
     plasmid_id = test_settings.PLASMID_TO_MODIFY
-    original_plasmid = labguru_api.get_plasmid(plasmid_id)
+    original_plasmid = labguru_api.get_plasmid_by_id(plasmid_id)
     original_title = original_plasmid.get("title")
     update_fields = {"title": "Updated Title by Integration Test"}
     updated_plasmid = labguru_api.update_plasmid(plasmid_id, update_fields)
@@ -49,9 +49,9 @@ def test_create_and_delete_plasmid(labguru_api):
     assert "id" in created_plasmid, "Created plasmid does not have an 'id'."
     plasmid_id = created_plasmid["id"]
 
-    retrieved_plasmid = labguru_api.get_plasmid(plasmid_id)
+    retrieved_plasmid = labguru_api.get_plasmid_by_id(plasmid_id)
     assert retrieved_plasmid.get("title") == payload["title"], "Experiment title does not match."
 
     labguru_api.delete_plasmid(plasmid_id)
     with pytest.raises(Exception):
-        labguru_api.get_plasmid(plasmid_id)
+        labguru_api.get_plasmid_by_id(plasmid_id)

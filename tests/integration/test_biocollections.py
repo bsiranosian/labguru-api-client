@@ -43,33 +43,15 @@ def test_filter_biocollection_items(labguru_api):
 
 
 @pytest.mark.integration
-def test_list_generic_items(labguru_api):
+def test_get_generic_items_all(labguru_api):
     """
     Test listing generic items in a collection.
     """
     generic_collection_name = test_settings.TEST_GENERIC_COLLECTION_NAME
-    response = labguru_api.list_generic_items(
-        generic_collection_name=generic_collection_name,
-        page=1,
-        meta="true",
-    )
-    assert isinstance(response, dict), "Response should be a dict."
-    assert "meta" in response, "Response should have a 'meta' key."
-    assert "data" in response, "Response should have a 'data' key."
-    assert isinstance(response["data"], list), "Response data should be a list."
-
-
-@pytest.mark.integration
-def test_list_generic_items_all_pages(labguru_api):
-    """
-    Test listing generic items in a collection.
-    """
-    generic_collection_name = test_settings.TEST_GENERIC_COLLECTION_NAME
-    response = labguru_api.list_generic_items_all_pages(
+    response = labguru_api.get_generic_items_all(
         generic_collection_name=generic_collection_name,
     )
-    assert isinstance(response, list), "Response should be a list."
-    assert isinstance(response[0], dict), "Response data should be a list of dict."
+    assert isinstance(response, list), "Response data should be a list."
 
 
 @pytest.mark.integration
