@@ -1111,7 +1111,7 @@ class BiocollectionsAPI:
         labguru_api = LabguruAPI()
         collection_items = labguru_api.get_generic_items_all(collection_name)
 
-        fixed_columns = ["id", "name", "auto_name", "created_at", "updated_at", "updated_by"]
+        fixed_columns = ["id", "name", "description", "auto_name", "created_at", "updated_at", "updated_by"]
 
         # table-specific columns
         all_keys = list(collection_items[0].keys())
