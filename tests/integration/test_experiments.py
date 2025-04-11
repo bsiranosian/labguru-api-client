@@ -15,22 +15,22 @@ def labguru_api():
 
 
 @pytest.mark.integration
-def test_get_all_experiments(labguru_api):
-    experiments = labguru_api.get_all_experiments(page=1, meta="false")
+def test_get_experiments_all(labguru_api):
+    experiments = labguru_api.get_experiments_all()
     assert isinstance(experiments, (dict, list)), "Response should be a dict or list."
 
 
 @pytest.mark.integration
-def test_get_experiment(labguru_api):
+def test_get_experiment_by_id(labguru_api):
     experiment_id = test_settings.ALLOWED_EXPERIMENT_IDS[0]
-    experiment = labguru_api.get_experiment(experiment_id)
+    experiment = labguru_api.get_experiment_by_id(experiment_id)
     assert experiment.get("id") == experiment_id, f"Retrieved experiment id {experiment.get('id')} does not match expected {experiment_id}."
 
 
 @pytest.mark.integration
 def test_update_experiment(labguru_api):
     experiment_id = test_settings.EXPERIMENT_TO_MODIFY
-    original_experiment = labguru_api.get_experiment(experiment_id)
+    original_experiment = labguru_api.get_experiment_by_id(experiment_id)
     original_title = original_experiment.get("title")
     update_fields = {"title": "Updated Title by Integration Test"}
     updated_experiment = labguru_api.update_experiment(experiment_id, update_fields)
@@ -49,9 +49,9 @@ def test_create_and_delete_experiment(labguru_api):
     assert "id" in created_experiment, "Created experiment does not have an 'id'."
     experiment_id = created_experiment["id"]
 
-    retrieved_experiment = labguru_api.get_experiment(experiment_id)
+    retrieved_experiment = labguru_api.get_experiment_by_id(experiment_id)
     assert retrieved_experiment.get("title") == payload["title"], "Experiment title does not match."
 
     labguru_api.delete_experiment(experiment_id)
     with pytest.raises(Exception):
-        labguru_api.get_experiment(experiment_id)
+        labguru_api.get_experiment_by_id(experiment_id)
